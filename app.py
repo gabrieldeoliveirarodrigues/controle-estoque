@@ -198,3 +198,37 @@ if st.session_state.historico:
     st.dataframe(hist_df.sort_values(by="Data", ascending=False), use_container_width=True)
 else:
     st.info("Nenhuma movimentação registrada ainda.")
+
+
+# ============================
+# ABA: Sugerir Melhorias
+# ============================
+elif menu == "Sugerir Melhorias":
+    st.subheader("🧠 Sugerir Melhorias ou Ensinar o Sistema")
+    sugestao = st.text_area("Digite aqui sua sugestão ou melhoria para o sistema:")
+
+    if st.button("Enviar Sugestão"):
+        if sugestao.strip() != "":
+            with open("sugestoes.txt", "a", encoding="utf-8") as f:
+                f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {usuario}: {sugestao}\n")
+            st.success("Sugestão registrada com sucesso! Obrigado por contribuir.")
+        else:
+            st.warning("Por favor, digite uma sugestão antes de enviar.")
+
+# ============================
+# ALERTA DE BAIXO ESTOQUE (na aba principal)
+# ============================
+if menu == "Controle de Estoque":
+    st.subheader("📦 Estoque Atual")
+    df_display = df.copy()
+
+    # Verifica e sinaliza baixo estoque (limite <= 5)
+    df_display["Alerta"] = df_display["Quantidade"].apply(lambda x: "⚠️" if x <= 5 else "")
+    df_display = df_display[["Produto", "Quantidade", "Unidade", "Alerta"]]
+    st.dataframe(df_display)
+
+    # Destacar alertas
+    baixo_estoque = df_display[df_display["Alerta"] == "⚠️"]
+    if not baixo_estoque.empty:
+        st.error("🚨 ATENÇÃO: Há itens com baixo estoque!")
+        st.dataframe(baixo_estoque)
