@@ -268,3 +268,27 @@ if st.button("📄 Exportar para PDF"):
     if not baixo_estoque.empty:
         st.error("🚨 ATENÇÃO: Há itens com baixo estoque!")
         st.dataframe(baixo_estoque)
+
+
+
+menu = st.sidebar.selectbox("Menu", ["Controle de Estoque", "Histórico", "Importar Dados", "Sugerir Melhorias"])
+
+if menu == "Controle de Estoque":
+    st.title("📦 Controle de Estoque")
+    # Coloque aqui o conteúdo da aba Controle de Estoque
+
+elif menu == "Histórico":
+    st.title("📜 Histórico de Movimentações")
+    # Coloque aqui o conteúdo da aba Histórico
+
+elif menu == "Importar Dados":
+    st.title("📁 Importar Base de Dados")
+    # Coloque aqui o conteúdo da aba Importar Dados
+
+elif menu == "Sugerir Melhorias":
+    st.title("💡 Sugerir Melhorias")
+    sugestao = st.text_area("Descreva sua sugestão para melhorar o sistema:")
+    if st.button("Enviar Sugestão"):
+        with open("melhorias.txt", "a", encoding="utf-8") as f:
+            f.write(sugestao + "\n")
+        st.success("Sugestão enviada com sucesso!")
