@@ -1,16 +1,17 @@
 
-# Sistema de Controle de Estoque (Sem Login)
+# Sistema de Controle de Estoque
 
-Versão do sistema sem autenticação de usuário.
+Sistema robusto com:
 
-## 📦 Requisitos
-- Python 3.8+
-- Instalar dependências:
+✅ Entrada e saída de produtos  
+✅ Estoque atual com alerta ⚠️ (quando ≤ 20 unidades)  
+✅ Histórico completo de movimentações  
+✅ Exportação para CSV e Excel  
+✅ Gráficos de movimentação  
+✅ Sugestão de melhorias  
+
+## Executar
 ```bash
 pip install -r requirements.txt
-```
-
-## 🚀 Executar o app
-```bash
 streamlit run app.py
 ```
