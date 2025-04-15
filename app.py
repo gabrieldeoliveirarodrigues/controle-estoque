@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS estoque (
     unidade TEXT,
     data TEXT,
     tipo TEXT
-)
+, ultima_modificacao TEXT)
 """)
 conn.commit()
 
