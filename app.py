@@ -48,7 +48,8 @@ if not st.session_state.usuario_logado:
             user = verificar_usuario(usuario, senha)
             if user:
                 st.session_state.usuario_logado = user
-                st.experimental_rerun()
+                st.success("Login realizado com sucesso. Recarregando...")
+                st.stop()
             else:
                 st.error("Usuário ou senha inválidos.")
     st.stop()
@@ -58,7 +59,7 @@ usuario_atual = st.session_state.usuario_logado
 st.sidebar.success(f"Logado como: {usuario_atual['nome']} ({usuario_atual['permissao']})")
 if st.sidebar.button("Sair"):
     st.session_state.usuario_logado = None
-    st.experimental_rerun()
+    st.stop()
 
 st.title("📦 Sistema de Controle de Estoque")
 
