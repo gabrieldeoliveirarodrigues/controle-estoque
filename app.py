@@ -7,28 +7,31 @@ import os
 
 # Inicializar banco de dados
 def inicializar_usuarios():
-    conn = sqlite3.connect("usuarios.db")
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT)''')
-    conn.commit()
+    try:
+        conn = sqlite3.connect("usuarios.db", check_same_thread=False)
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT)''')
+        conn.commit()
 
-    usuarios = [("GABRIEL RODRIGUES", "051020"),
-                ("PRISCILLA LYRA", "051020")]
+        usuarios = [("GABRIEL RODRIGUES", "051020"),
+                    ("PRISCILLA LYRA", "051020")]
 
-    for usuario, senha in usuarios:
-        cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,))
-        if not cursor.fetchone():
-            senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
-            cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha_hash))
-            conn.commit()
+        for usuario, senha in usuarios:
+            cursor.execute("SELECT 1 FROM usuarios WHERE usuario = ?", (usuario,))
+            if not cursor.fetchone():
+                senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
+                cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha_hash))
+                conn.commit()
 
-    conn.close()
+        conn.close()
+    except Exception as e:
+        st.error(f"Erro ao inicializar usuários: {e}")
 
 inicializar_usuarios()
 
 # Autenticação
 def autenticar(usuario, senha):
-    conn = sqlite3.connect("usuarios.db")
+    conn = sqlite3.connect("usuarios.db", check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("SELECT senha FROM usuarios WHERE usuario = ?", (usuario,))
     resultado = cursor.fetchone()
