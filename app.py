@@ -1,3 +1,26 @@
+import os
+import sqlite3
+
+# Remove o banco se a estrutura estiver incorreta
+def validar_estrutura_banco():
+    try:
+        conn = sqlite3.connect("usuarios.db", check_same_thread=False)
+        cursor = conn.cursor()
+        cursor.execute("SELECT usuario, senha FROM usuarios LIMIT 1")
+        conn.close()
+    except Exception:
+        if os.path.exists("usuarios.db"):
+            os.remove("usuarios.db")
+
+def inicializar_banco():
+    conn = sqlite3.connect("usuarios.db", check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT)")
+    conn.commit()
+    conn.close()
+
+validar_estrutura_banco()
+inicializar_banco()
 import sqlite3
 # Inicializa o banco e cria a tabela de usuários (caso ainda não exista)
 def inicializar_banco():
