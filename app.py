@@ -7,7 +7,7 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime
 
-# Inicializa banco e insere usuários padrão (sem deletar o banco)
+# Inicializa banco e insere usuários padrão (sem erro de duplicação)
 def inicializar_banco():
     conn = sqlite3.connect("usuarios.db", check_same_thread=False)
     cursor = conn.cursor()
@@ -17,10 +17,9 @@ def inicializar_banco():
         ("Priscilla Lyra", bcrypt.hashpw("051020".encode(), bcrypt.gensalt()).decode())
     ]
     for usuario, senha in usuarios_iniciais:
-        try:
+        cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,))
+        if not cursor.fetchone():
             cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha))
-        except sqlite3.IntegrityError:
-            pass  # Usuário já existe
     conn.commit()
     conn.close()
 
