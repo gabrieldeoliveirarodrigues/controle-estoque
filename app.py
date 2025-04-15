@@ -5,26 +5,34 @@ import bcrypt
 import sqlite3
 import os
 
-# Conexão com banco de dados de usuários
-conn = sqlite3.connect("usuarios.db")
-cursor = conn.cursor()
-cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT, senha TEXT)''')
-conn.commit()
+# Inicializar banco de dados
+def inicializar_usuarios():
+    conn = sqlite3.connect("usuarios.db")
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT)''')
+    conn.commit()
 
-# Usuários fixos
-usuarios = [("GABRIEL RODRIGUES", bcrypt.hashpw("051020".encode(), bcrypt.gensalt())),
-            ("PRISCILLA LYRA", bcrypt.hashpw("051020".encode(), bcrypt.gensalt()))]
+    usuarios = [("GABRIEL RODRIGUES", "051020"),
+                ("PRISCILLA LYRA", "051020")]
 
-for usuario, senha in usuarios:
-    cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,))
-    if not cursor.fetchone():
-        cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha.decode()))
-        conn.commit()
+    for usuario, senha in usuarios:
+        cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,))
+        if not cursor.fetchone():
+            senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
+            cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha_hash))
+            conn.commit()
+
+    conn.close()
+
+inicializar_usuarios()
 
 # Autenticação
 def autenticar(usuario, senha):
+    conn = sqlite3.connect("usuarios.db")
+    cursor = conn.cursor()
     cursor.execute("SELECT senha FROM usuarios WHERE usuario = ?", (usuario,))
     resultado = cursor.fetchone()
+    conn.close()
     if resultado and bcrypt.checkpw(senha.encode(), resultado[0].encode()):
         return True
     return False
