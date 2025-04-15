@@ -1,12 +1,68 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import sqlite3
+import bcrypt
 
 st.set_page_config(page_title="Sistema de Controle de Estoque", layout="wide")
 
-st.title("📦 Sistema de Controle de Estoque - Web")
+# Banco de dados de usuários
+def conectar():
+    return sqlite3.connect("usuarios.db")
 
-# Sessões para armazenar dados durante a execução
+def verificar_usuario(usuario, senha):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT nome, senha_hash, permissao FROM usuarios WHERE usuario = ?", (usuario,))
+    row = cursor.fetchone()
+    conn.close()
+    if row and bcrypt.checkpw(senha.encode(), row[1]):
+        return {"nome": row[0], "usuario": usuario, "permissao": row[2]}
+    return None
+
+def cadastrar_usuario(nome, usuario, senha, permissao):
+    conn = conectar()
+    cursor = conn.cursor()
+    senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt())
+    try:
+        cursor.execute("INSERT INTO usuarios (nome, usuario, senha_hash, permissao) VALUES (?, ?, ?, ?)",
+                       (nome, usuario, senha_hash, permissao))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+# Autenticação
+if "usuario_logado" not in st.session_state:
+    st.session_state.usuario_logado = None
+
+if not st.session_state.usuario_logado:
+    st.title("🔐 Login")
+    with st.form("login_form"):
+        usuario = st.text_input("Usuário")
+        senha = st.text_input("Senha", type="password")
+        submitted = st.form_submit_button("Entrar")
+        if submitted:
+            user = verificar_usuario(usuario, senha)
+            if user:
+                st.session_state.usuario_logado = user
+                st.experimental_rerun()
+            else:
+                st.error("Usuário ou senha inválidos.")
+    st.stop()
+
+# Sistema principal
+usuario_atual = st.session_state.usuario_logado
+st.sidebar.success(f"Logado como: {usuario_atual['nome']} ({usuario_atual['permissao']})")
+if st.sidebar.button("Sair"):
+    st.session_state.usuario_logado = None
+    st.experimental_rerun()
+
+st.title("📦 Sistema de Controle de Estoque")
+
+# Sessões de dados
 if "estoque" not in st.session_state:
     st.session_state.estoque = pd.DataFrame(columns=[
         "Produto Técnico", "Tipo", "Medida", "Marca/Grupo", "Quantidade", "Unidade"])
@@ -14,7 +70,25 @@ if "estoque" not in st.session_state:
 if "historico" not in st.session_state:
     st.session_state.historico = []
 
-# Seção para importar base de dados
+# Cadastro de novos usuários (somente admin)
+if usuario_atual["permissao"] == "admin":
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("👥 Cadastrar Novo Usuário")
+    with st.sidebar.form("form_cadastro"):
+        nome_novo = st.text_input("Nome completo")
+        usuario_novo = st.text_input("Novo usuário")
+        senha_novo = st.text_input("Senha", type="password")
+        permissao_novo = st.selectbox("Permissão", ["usuario", "admin"])
+        cadastrar = st.form_submit_button("Cadastrar")
+        if cadastrar:
+            sucesso = cadastrar_usuario(nome_novo, usuario_novo, senha_novo, permissao_novo)
+            if sucesso:
+                st.sidebar.success("Usuário cadastrado com sucesso.")
+            else:
+                st.sidebar.error("Usuário já existe.")
+
+# Importar planilha
+st.sidebar.markdown("---")
 st.sidebar.header("📁 Importar Base de Dados")
 arquivo = st.sidebar.file_uploader("Selecione um arquivo Excel (.xlsx)", type=["xlsx"])
 if arquivo:
@@ -24,14 +98,11 @@ if arquivo:
     def processar_estrutura(row):
         descricao = row['ESTRUTURAS']
         estoque_raw = row['ESTOQUE']
-
         match_qtd = re.match(r"(\d+)\s+(\w+)", str(estoque_raw))
         qtd = int(match_qtd.group(1)) if match_qtd else None
         unid = match_qtd.group(2) if match_qtd else None
-
         produto = descricao.upper().strip()
         tipo = medida = marca = "-"
-
         if "TRILHO" in produto:
             tipo = "Trilho"
             medida_search = re.search(r"(\d+[,.]?\d*)", produto)
@@ -54,7 +125,6 @@ if arquivo:
             tipo = "L de Fixação"
         else:
             tipo = "Componente"
-
         if "2P" in produto:
             marca = "2P GROUP"
         elif "IZI" in produto:
@@ -65,7 +135,6 @@ if arquivo:
             marca = "2P MADEIRA"
         elif "METAL" in produto:
             marca = "2P METAL"
-
         return pd.Series({
             "Produto Técnico": produto.title(),
             "Tipo": tipo,
@@ -114,6 +183,7 @@ else:
             "Produto": produto,
             "Tipo": tipo,
             "Quantidade": quantidade,
+            "Usuário": usuario_atual['nome'],
             "Observação": obs
         })
         st.success("Movimentação registrada com sucesso!")
