@@ -1,25 +1,25 @@
 import os
 import sqlite3
+import bcrypt
 
-# Remove o banco se a estrutura estiver incorreta
-def validar_estrutura_banco():
-    try:
-        conn = sqlite3.connect("usuarios.db", check_same_thread=False)
-        cursor = conn.cursor()
-        cursor.execute("SELECT usuario, senha FROM usuarios LIMIT 1")
-        conn.close()
-    except Exception:
-        if os.path.exists("usuarios.db"):
-            os.remove("usuarios.db")
+# Força a recriação do banco sempre que iniciar
+if os.path.exists("usuarios.db"):
+    os.remove("usuarios.db")
 
+# Inicializa banco e insere usuários padrão
 def inicializar_banco():
     conn = sqlite3.connect("usuarios.db", check_same_thread=False)
     cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT)")
+    cursor.execute("CREATE TABLE usuarios (usuario TEXT PRIMARY KEY, senha TEXT)")
+    usuarios_iniciais = [
+        ("Gabriel Rodrigues", "$2b$12$8rv5sup/.v7XtBKvD9OSM.E2vvWOFXmrPjuhyv6qm4VPF40sndn/y"),
+        ("Priscilla Lyra", "$2b$12$8rv5sup/.v7XtBKvD9OSM.E2vvWOFXmrPjuhyv6qm4VPF40sndn/y")
+    ]
+    for usuario, senha in usuarios_iniciais:
+        cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha))
     conn.commit()
     conn.close()
 
-validar_estrutura_banco()
 inicializar_banco()
 import sqlite3
 # Inicializa o banco e cria a tabela de usuários (caso ainda não exista)
