@@ -1,59 +1,62 @@
 
 import streamlit as st
 import pandas as pd
-import os
+import sqlite3
+import datetime
 
-st.set_page_config(page_title="Controle de Estoque", layout="wide")
-st.title("📦 Sistema de Controle de Estoque")
+st.set_page_config(layout="wide")
+st.title("📦 Controle de Estoque")
 
-# Sessão de dados
-if "dados" not in st.session_state:
-    st.session_state.dados = pd.DataFrame(columns=["nome", "unidade", "saldo"])
+# Conexão com o banco de dados
+def conectar():
+    return sqlite3.connect("usuarios.db", check_same_thread=False)
 
-menu = st.sidebar.selectbox("Menu", ["Estoque Atual", "Entrada", "Saída", "Importar Excel"])
+# Inicializar banco
+def inicializar_banco():
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS estoque (nome TEXT, unidade TEXT, saldo INTEGER)")
+    conn.commit()
+    conn.close()
 
-def salvar_csv():
-    st.session_state.dados.to_csv("estoque.csv", index=False)
+inicializar_banco()
 
-if menu == "Estoque Atual":
-    st.subheader("📋 Estoque Atual")
-    df = st.session_state.dados.copy()
-    df["alerta"] = df["saldo"].apply(lambda x: "⚠️" if x < 0 else "")
-    st.dataframe(df, use_container_width=True)
+# Upload do Excel
+uploaded_file = st.file_uploader("Importar arquivo de estoque (Excel)", type=["xlsx"])
 
-elif menu == "Entrada":
-    st.subheader("📥 Entrada de Equipamentos")
-    nome = st.text_input("Nome do Produto")
-    unidade = st.text_input("Unidade", value="un")
-    quantidade = st.number_input("Quantidade", step=1)
-    if st.button("Registrar Entrada"):
-        if nome:
-            if nome in st.session_state.dados["nome"].values:
-                st.session_state.dados.loc[st.session_state.dados["nome"] == nome, "saldo"] += quantidade
-            else:
-                st.session_state.dados.loc[len(st.session_state.dados)] = [nome, unidade, quantidade]
-            salvar_csv()
-            st.success("Entrada registrada.")
-
-elif menu == "Saída":
-    st.subheader("📤 Saída de Equipamentos")
-    nomes_produtos = st.session_state.dados["nome"].tolist()
-    if nomes_produtos:
-        nome = st.selectbox("Selecione o Produto", nomes_produtos)
-        quantidade = st.number_input("Quantidade", step=1)
-        if st.button("Registrar Saída"):
-            st.session_state.dados.loc[st.session_state.dados["nome"] == nome, "saldo"] -= quantidade
-            salvar_csv()
-            st.success("Saída registrada.")
-    else:
-        st.info("Nenhum produto no estoque.")
-
-elif menu == "Importar Excel":
-    st.subheader("📁 Importar Arquivo de Estoque")
-    uploaded_file = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"])
-    if uploaded_file is not None:
+if uploaded_file is not None:
+    try:
         df_importado = pd.read_excel(uploaded_file)
-        df_importado["saldo"] = df_importado["saldo"].astype(int)
-        st.session_state.dados = df_importado
-        salvar_csv()
-        st.success("Importado com sucesso!")
+        df_importado.columns = df_importado.columns.str.strip().str.lower()
+
+        colunas_esperadas = {
+            "nome": ["nome", "produto", "item"],
+            "unidade": ["unidade", "und", "uni"],
+            "saldo": ["saldo", "quantidade", "qtd"]
+        }
+
+        col_map = {}
+        for padrao, alternativas in colunas_esperadas.items():
+            for alt in alternativas:
+                if alt in df_importado.columns:
+                    col_map[padrao] = alt
+                    break
+
+        if set(col_map.keys()) != set(colunas_esperadas.keys()):
+            st.error("Erro: O arquivo Excel precisa conter colunas de nome, unidade e saldo.")
+        else:
+            df_importado = df_importado.rename(columns={v: k for k, v in col_map.items()})
+            df_importado["saldo"] = pd.to_numeric(df_importado["saldo"], errors="coerce").fillna(0).astype(int)
+
+            conn = conectar()
+            df_importado.to_sql("estoque", conn, if_exists="replace", index=False)
+            st.success("Arquivo importado com sucesso e estoque substituído.")
+    except Exception as e:
+        st.error(f"Erro ao importar o arquivo: {e}")
+
+# Mostrar estoque atual
+st.subheader("📋 Estoque Atual")
+conn = conectar()
+df_estoque = pd.read_sql_query("SELECT * FROM estoque", conn)
+conn.close()
+st.dataframe(df_estoque)
