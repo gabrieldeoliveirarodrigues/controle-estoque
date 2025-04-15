@@ -1,3 +1,5 @@
+from fpdf import FPDF
+import io
 import streamlit as st
 import pandas as pd
 import datetime
@@ -223,9 +225,43 @@ if menu == "Controle de Estoque":
     df_display = df.copy()
 
     # Verifica e sinaliza baixo estoque (limite <= 5)
-    df_display["Alerta"] = df_display["Quantidade"].apply(lambda x: "⚠️" if x <= 5 else "")
+    df_display["Alerta"] = df_display["Quantidade"].apply(lambda x: "⚠️" if x <= 20 else "")
     df_display = df_display[["Produto", "Quantidade", "Unidade", "Alerta"]]
     st.dataframe(df_display)
+
+# Exportar como Excel
+if st.button("📤 Exportar para Excel"):
+    excel_file = io.BytesIO()
+    with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name="Estoque")
+    st.download_button(
+        label="📥 Baixar Excel",
+        data=excel_file.getvalue(),
+        file_name="estoque.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# Exportar como PDF
+if st.button("📄 Exportar para PDF"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Relatório de Estoque", ln=True, align='C')
+    pdf.ln(10)
+
+    for index, row in df.iterrows():
+        linha = f"{row['Produto']} - {row['Quantidade']} {row['Unidade']}"
+        pdf.cell(200, 10, txt=linha, ln=True)
+
+    pdf_output = io.BytesIO()
+    pdf.output(pdf_output)
+    st.download_button(
+        label="📥 Baixar PDF",
+        data=pdf_output.getvalue(),
+        file_name="estoque.pdf",
+        mime="application/pdf"
+    )
+
 
     # Destacar alertas
     baixo_estoque = df_display[df_display["Alerta"] == "⚠️"]
