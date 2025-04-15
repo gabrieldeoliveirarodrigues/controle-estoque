@@ -1,3 +1,12 @@
+# Inicializa o banco e cria a tabela de usuários (caso ainda não exista)
+def inicializar_banco():
+    conn = sqlite3.connect("usuarios.db", check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT)")
+    conn.commit()
+    conn.close()
+
+inicializar_banco()
 
 import streamlit as st
 import pandas as pd
@@ -31,17 +40,6 @@ inicializar_usuarios()
 
 # Autenticação
 def autenticar(usuario, senha):
-    conn = sqlite3.connect("usuarios.db", check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT)")
-    conn.commit()
-    cursor.execute("SELECT senha FROM usuarios WHERE usuario = ?", (usuario,))
-    resultado = cursor.fetchone()
-    conn.close()
-    if resultado and bcrypt.checkpw(senha.encode(), resultado[0].encode()):
-        return True
-    return False
-
     conn = sqlite3.connect("usuarios.db", check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("SELECT senha FROM usuarios WHERE usuario = ?", (usuario,))
