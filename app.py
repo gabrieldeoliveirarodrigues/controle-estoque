@@ -1,3 +1,4 @@
+import sqlite3
 # Inicializa o banco e cria a tabela de usuários (caso ainda não exista)
 def inicializar_banco():
     conn = sqlite3.connect("usuarios.db", check_same_thread=False)
